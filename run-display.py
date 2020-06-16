@@ -3,12 +3,16 @@
 # Date: 15.06.2020
 
 # ############
-# Define Var
-version = "1.0"
+# Define Var - CHANGE ME!
 country = "Germany"
-errormsg = "Null"
 update_intervall = 600 # 10 Minutes
+use_scrolling = False # If False, text will not scroll on display but show in seperate phases
 # ############
+
+# Define Var not to be changed
+version = 1.1
+errormsg = "Null"
+
 
 # Define Error Logging
 def printerror(ex):
@@ -23,6 +27,7 @@ print("Loading modules")
 try:
 	import time
 	from signal import signal, SIGINT
+	import threading
 	import sys
 	from datetime import datetime, date, timedelta
 	import json
@@ -45,6 +50,7 @@ parser.add_argument("--version", "-v", help="Prints the version", action="store_
 parser.add_argument("--backlightoff", "-b", help="Turns off the backlight of the lcd", action="store_true")
 parser.add_argument("--list", "-l", help="Shows a list of available countries", action="store_true")
 parser.add_argument("--timer", "-t", type=int, help="Shows a list of available countries")
+parser.add_argument("--scroll", "-s", help="If used, text will not show in seperate steps but scroll from right to left until timer has reached", action="store_true")
 parser.add_argument("--country", "-c",  type=str, help="Select a different county once.", action='store')
 
 args = parser.parse_args()
@@ -59,6 +65,11 @@ if args.timer:
 if args.country:
 	printwarning("Selected different country: " + args.country)
 	country = args.country
+
+if args.scroll:
+	printwarning("Selected scrolling option")
+	use_scrolling = True
+
 
 # Load driver for LCD display
 try:
@@ -111,6 +122,8 @@ def handler(signal_received, frame):
 	# Handle any cleanup here
 	print()
 	printwarning('SIGINT or CTRL-C detected. Please wait until the service has stopped.')
+
+
 	if errormsg == "Null":
 		display.lcd_clear()
 		display.lcd_display_string("Manual cancel.", 1)
@@ -152,7 +165,34 @@ def clear():
 	else:
 		_ = system('clear')
 
-#Countdown in seconds
+
+
+# Prints running text to display
+def print_lcd_scrolling(text, row):
+	t = threading.currentThread()
+	str_pad = 16 * " "
+	longtext = str_pad + text
+	while getattr(t, "do_run", True):
+		for i in range (0, len(longtext)):
+			lcd_text = longtext[i:(i+16)]
+			display.lcd_display_string(lcd_text, row)
+			time.sleep(0.4)
+			display.lcd_display_string(str_pad, row)
+
+# Prints each info seperatly to display, seperate by using |
+def print_lcd_seperate(text, row):
+	list = text.split('| ')
+	t = threading.currentThread()
+	str_pad = 16 * " "
+	display.lcd_display_string(str_pad, row) # Clear row
+
+	while getattr(t, "do_run", True):
+		for i in list:
+			display.lcd_display_string(i, row)
+			time.sleep(3)
+			display.lcd_display_string(str_pad, row)
+
+# Countdown in seconds
 def countdown(t):
 	total = t
 	progvalue = 0
@@ -164,6 +204,7 @@ def countdown(t):
 		time.sleep(1)
 		t -= 1
 	print(" ", end="\r")
+
 
 # Get selected country information
 def getCountryInfo():
@@ -255,7 +296,16 @@ def displayActive():
 		# Display data external
 		display.lcd_clear()
 		display.lcd_display_string(country, 1)
-		display.lcd_display_string("Active: " + str(active), 2)
+
+		if use_scrolling == True:
+			text_to_display = "Infected: " + str(infected) + " | Recovered: " + str(recovered) + " | Deceased: " + str(deceased) + " | Active: " + str(active)
+			lcd_loop = threading.Thread(target=print_lcd_scrolling, args=(text_to_display, 2))
+		else:
+			text_to_display = "Inf: " + str(infected) + " | Rec: " + str(recovered) + " | Dec: " + str(deceased) + " | Act: " + str(active)
+			lcd_loop = threading.Thread(target=print_lcd_seperate, args=(text_to_display, 2))
+
+		lcd_loop.name = 'lcd_loop_thread'
+		lcd_loop.start()
 
 		clear()
 		print("===== " + country + " =====")
@@ -267,6 +317,8 @@ def displayActive():
 		print()
 
 		countdown(update_intervall)
+		lcd_loop.do_run = False
+		lcd_loop.join()
 
 # Main
 if __name__ == '__main__':
