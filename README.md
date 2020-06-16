@@ -1,5 +1,5 @@
 # COVID-19 Display for Raspberry PI and I2C 16x2
-This app was created to show the current cases of a selected country. It will update itself every 10 minutes with the latest data or after a given time period. 
+This app was created to show the current cases of a selected country. It will update itself every 10 minutes with the latest data or after a given time period. For more questions and options please see the [wiki!](https://github.com/maxi07/speedtest-display/wiki)
 
 <img src="https://raw.githubusercontent.com/maxi07/covid19-display/master/doc/IMG_4785.JPEG" align="center"/>
 <img src="https://raw.githubusercontent.com/maxi07/covid19-display/master/doc/Python-screenshot.png" align="center"/>
