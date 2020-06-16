@@ -6,6 +6,8 @@
 # Define Var
 version = "1.0"
 country = "Germany"
+errormsg = "Null"
+update_intervall = 600 # 10 Minutes
 # ############
 
 # Define Error Logging
@@ -25,6 +27,7 @@ try:
 	from datetime import datetime, date, timedelta
 	import json
 	import requests
+	from os import system, name
 	import argparse
 	import lcddriver
 except ModuleNotFoundError:
@@ -40,13 +43,22 @@ except:
 parser = argparse.ArgumentParser()
 parser.add_argument("--version", "-v", help="Prints the version", action="store_true")
 parser.add_argument("--backlightoff", "-b", help="Turns off the backlight of the lcd", action="store_true")
-parser.add_argument("--countries", "-c", help="Shows a list of available countries", action="store_true")
+parser.add_argument("--list", "-l", help="Shows a list of available countries", action="store_true")
+parser.add_argument("--timer", "-t", type=int, help="Shows a list of available countries")
+parser.add_argument("--country", "-c",  type=str, help="Select a different county once.", action='store')
 
 args = parser.parse_args()
 if args.version:
 	print(str(version))
 	exit(0)
 
+if args.timer:
+	printwarning("Set new timer to " + str(args.timer))
+	update_intervall = args.timer
+
+if args.country:
+	printwarning("Selected different country: " + args.country)
+	country = args.country
 
 # Load driver for LCD display
 try:
@@ -119,8 +131,7 @@ def readCountries(p=False):
 			json_data_countries = json.loads(r.text)
 			for item in json_data_countries['data']:
 				if p == True:
-					# id = item['moreData'].split("/")[5]
-					print("Country: " + item['location'] + "		| last update: " + item['updated'] + "		| ID: " + item['country_code'])
+					print("ID: " + item['country_code'] + "		| last update: " + item['updated'] + "		| Country: " + item['location'])
 			return json_data_countries
 		else:
 			print("Failed contacting server")
@@ -131,16 +142,28 @@ def readCountries(p=False):
 		print(e)
 		exit()
 
+# Clears the display
+def clear():
+	# for windows
+	if name == 'nt':
+		_ = system('cls')
 
-def read_string_part(val, key, stop):
-	try:
-		left,sep,right = val.partition(key)
-		if sep:
-			return str((right[:stop]))
-		else:
-			return "Null"
-	except Exception as e:
-		printerror("Failed splitting string " + val)
+	# for mac and linux(here, os.name is 'posix')
+	else:
+		_ = system('clear')
+
+#Countdown in seconds
+def countdown(t):
+	total = t
+	progvalue = 0
+
+	while t:
+		mins, secs = divmod(t, 60)
+		timer = '{:02d}:{:02d}'.format(mins, secs)
+		print("Time until next run: " + timer, end="\r")
+		time.sleep(1)
+		t -= 1
+	print(" ", end="\r")
 
 # Get selected country information
 def getCountryInfo():
@@ -203,6 +226,47 @@ def readRecovered(json):
         except Exception as e:
                 printwarning("Failed reading recovered status!")
                 return "N/A"
+# Return value from json
+def readUpdated(json):
+        try:
+                return json['data'][0]['updated']
+        except Exception as e:
+                printwarning("Failed reading last update status!")
+                return "N/A"
+
+# Display active cases
+def displayActive():
+	while(True):
+		# Read country info
+		display.lcd_display_string("Retreiving data", 2)
+		c = getCountryInfo()
+
+		# Assign data
+		infected = readInfected(c)
+		updated = readUpdated(c).split('.')[0]
+		deceased = readDeceased(c)
+		recovered = readRecovered(c)
+		try:
+			active = infected - deceased - recovered
+		except:
+			printerror("Unable to calculate active cases.")
+			active = "N/A"
+
+		# Display data external
+		display.lcd_clear()
+		display.lcd_display_string(country, 1)
+		display.lcd_display_string("Active: " + str(active), 2)
+
+		clear()
+		print("===== " + country + " =====")
+		print("Infected:		" + str(infected))
+		print("Deceased:		" + str(deceased))
+		print("Recovered:		" + str(recovered))
+		print("Active:			" + str(active))
+		print("Last API Update:	" + str(updated))
+		print()
+
+		countdown(update_intervall)
 
 # Main
 if __name__ == '__main__':
@@ -210,32 +274,11 @@ if __name__ == '__main__':
 	signal(SIGINT, handler)
 
 	# Check for remaining arguments here
-	if args.countries:
+	if args.list:
 		readCountries(p=True)
+		display.lcd_clear()
+		display.lcd_display_string("Printed list", 1)
+		display.lcd_display_string("of all countries", 2)
 		exit(0)
 
-	# Read country info
-	display.lcd_display_string("Retreiving data", 2)
-	c = getCountryInfo()
-
-	# Assign data
-	infected = readInfected(c)
-	deceased = readDeceased(c)
-	recovered = readRecovered(c)
-	try:
-		active = infected - deceased - recovered
-	except:
-		printerror("Unable to calculate active cases.")
-		active = "N/A"
-
-	# Display data external
-	display.lcd_clear()
-	display.lcd_display_string(country, 1)
-	display.lcd_display_string("Active: " + str(active), 2)
-
-	print()
-	print("===== " + country + " =====")
-	print("Infected:	" + str(infected))
-	print("Deceased:	" + str(deceased))
-	print("Recovered:	" + str(recovered))
-	print("Active:		" + str(active))
+	displayActive()
