@@ -27,6 +27,24 @@ To print all available options, use
 python3 run-speedtest-display.py --help
 ```
 
+Currently, the following options are available:
+```
+usage: run-display.py [-h] [--version] [--backlightoff] [--list]
+                      [--timer TIMER] [--scroll] [--country COUNTRY]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --version, -v         Prints the version
+  --backlightoff, -b    Turns off the backlight of the lcd
+  --list, -l            Shows a list of available countries
+  --timer TIMER, -t TIMER
+                        Shows a list of available countries
+  --scroll, -s          If used, text will not show in seperate steps but
+                        scroll from right to left until timer has reached
+  --country COUNTRY, -c COUNTRY
+                        Select a different county once.
+```
+
 ## Credits
 The API used for this projects can be found at [TrackCorona](https://trackcorona.live).
 
