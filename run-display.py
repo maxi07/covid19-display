@@ -113,14 +113,14 @@ def handler(signal_received, frame):
 def readCountries(p=False):
 	try:
 		print("Reading list of all countries")
-		r = requests.get('https://api.apify.com/v2/key-value-stores/tVaYRsPHLjNdNBu7S/records/LATEST?disableRedirect=true')
+		r = requests.get('https://www.trackcorona.live/api/countries')
 		if r.status_code == 200:
 			print("Retrieved all country data")
 			json_data_countries = json.loads(r.text)
-			for item in json_data_countries:
+			for item in json_data_countries['data']:
 				if p == True:
-					id = item['moreData'].split("/")[5]
-					print("Country: " + item['country'] + " | last update: " + item['lastUpdatedApify'] + " | ID:" + id)
+					# id = item['moreData'].split("/")[5]
+					print("Country: " + item['location'] + "		| last update: " + item['updated'] + "		| ID: " + item['country_code'])
 			return json_data_countries
 		else:
 			print("Failed contacting server")
@@ -152,11 +152,12 @@ def getCountryInfo():
 	# Get correct country from ISO2 Code
 	country_list = readCountries()
 	id = ""
-	for i in country_list:
-		print("Checking " + i['country'], end="\r")
-		if i['country'] == country:
-			id = i['moreData'].split("/")[5]
-			print("Selected country " + i['country'] + " with ID " + id)
+	for i in country_list['data']:
+		print("Checking " + i['location'], end="\r")
+		if i['location'] == country:
+			# id = i['moreData'].split("/")[5]
+			id = i['country_code']
+			print("Selected country " + i['location'] + " with ID " + i['country_code'])
 		sys.stdout.write("\033[K") # Clear to the end of line
 
 	if not id:
@@ -164,8 +165,8 @@ def getCountryInfo():
 		exit(4)
 
 	try:
-		url = "https://api.apify.com/v2/key-value-stores/" + id + "/records/LATEST?disableRedirect=true"
-		# print("Getting data from " + url)
+		url = "https://www.trackcorona.live/api/countries/" + id
+		print("Getting data from " + url)
 		r = requests.get(url)
 		if r.status_code == 200:
 			country_json = json.loads(r.text)
@@ -182,28 +183,25 @@ def getCountryInfo():
 # Return value from json
 def readInfected(json):
 	try:
-		return json['infected']
+		return json['data'][0]['confirmed']
 	except Exception as e:
 		printwarning("Failed reading infected status!")
-		printwarning(e)
 		return "N/A"
 
 # Return value from json
 def readDeceased(json):
         try:
-                return json['deceased']
+                return json['data'][0]['dead']
         except Exception as e:
                 printwarning("Failed reading deceased status!")
-                printwarning(e)
                 return "N/A"
 
 # Return value from json
 def readRecovered(json):
         try:
-                return json['recovered']
+                return json['data'][0]['recovered']
         except Exception as e:
                 printwarning("Failed reading recovered status!")
-                printwarning(e)
                 return "N/A"
 
 # Main
@@ -233,11 +231,11 @@ if __name__ == '__main__':
 	# Display data external
 	display.lcd_clear()
 	display.lcd_display_string(country, 1)
-	display.lcd_display_string("Active: " + active, 2)
+	display.lcd_display_string("Active: " + str(active), 2)
 
 	print()
 	print("===== " + country + " =====")
-	print("Infected:	" + infected)
-	print("Deceased:	" + deceased)
-	print("Recovered:	" + recovered)
-	print("Active:		" + active)
+	print("Infected:	" + str(infected))
+	print("Deceased:	" + str(deceased))
+	print("Recovered:	" + str(recovered))
+	print("Active:		" + str(active))
