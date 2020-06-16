@@ -1,6 +1,8 @@
 # COVID-19 Display for Raspberry PI and I2C 16x2
 This app was created to show the current cases of a selected country. It will update itself every 10 minutes with the latest data or after a given time period. 
 
+<img src="https://raw.githubusercontent.com/maxi07/covid19-display/master/doc/IMG_4785.JPEG" align="center"/>
+
 ## Install
 Please clone the repository and run the installer with
 ```bash
